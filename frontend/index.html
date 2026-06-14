@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Hello Finance — Loans Made Simple</title>
+ <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1620,65 +1621,44 @@
   }
 
   async function submitContactForm() {
-    if (!validateContactForm()) return;
+  if (!validateContactForm()) return;
 
-    const btn = document.getElementById('cfSubmitBtn');
-    btn.disabled = true;
-    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Sending...`;
+  const btn = document.getElementById('cfSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Sending...`;
 
-    const payload = {
-      name:    document.getElementById('cfName').value.trim(),
-      phone:   document.getElementById('cfPhone').value.trim(),
-      email:   document.getElementById('cfEmail').value.trim(),
-      message: document.getElementById('cfMessage').value.trim(),
-      datetime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })
-    };
+  const templateParams = {
+    name:     document.getElementById('cfName').value.trim(),
+    phone:    document.getElementById('cfPhone').value.trim(),
+    email:    document.getElementById('cfEmail').value.trim(),
+    message:  document.getElementById('cfMessage').value.trim(),
+    datetime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })
+  };
 
-    try {
-      /* -----------------------------------------------------------
-         BACKEND INTEGRATION:
-         Replace the URL below with your Node.js server endpoint.
-         e.g.  'https://your-server.com/api/contact'
-         The backend server.js included in this package handles this.
-      ----------------------------------------------------------- */
-      const res = await fetch('https://hello-finance-api.onrender.com/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        document.getElementById('cfSuccess').classList.add('show');
-        document.getElementById('cfError').classList.remove('show');
-        ['cfName','cfPhone','cfEmail','cfMessage'].forEach(id => {
-          document.getElementById(id).value = '';
-          document.getElementById(id).classList.remove('error');
-        });
-      } else {
-        throw new Error('Server error');
-      }
-    } catch(e) {
-      /* Fallback: open mailto link so no lead is lost */
-      const s = payload;
-      const subject = encodeURIComponent('New Loan Enquiry from Hello Finance Website');
-      const body = encodeURIComponent(
-        `Name: ${s.name}\nPhone: ${s.phone}\nEmail: ${s.email}\nMessage: ${s.message}\nDate & Time: ${s.datetime}`
-      );
-      window.location.href = `mailto:ch.saideepakreddy@gmail.com?subject=${subject}&body=${body}`;
-      document.getElementById('cfErrorText').textContent = 'Server unavailable — opening your email client as a fallback.';
-      document.getElementById('cfError').classList.add('show');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Message`;
-    }
-  }
-
-  /* Input focus — clear error styling */
-  document.querySelectorAll('.cf-control').forEach(el => {
-    el.addEventListener('input', () => {
-      el.classList.remove('error');
+  try {
+    await emailjs.send('service_xfswum8', 'template_0ihmoha', templateParams, 'pIXQb9n5equZZLhBu');
+    document.getElementById('cfSuccess').classList.add('show');
+    document.getElementById('cfError').classList.remove('show');
+    ['cfName','cfPhone','cfEmail','cfMessage'].forEach(id => {
+      document.getElementById(id).value = '';
+      document.getElementById(id).classList.remove('error');
     });
+  } catch(err) {
+    console.error('EmailJS error:', err);
+    document.getElementById('cfErrorText').textContent = 'Failed to send. Please WhatsApp us at +91 98737 37373';
+    document.getElementById('cfError').classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Message`;
+  }
+}
+
+/* Input focus — clear error styling */
+document.querySelectorAll('.cf-control').forEach(el => {
+  el.addEventListener('input', () => {
+    el.classList.remove('error');
   });
+});
 
   /* Spinner keyframe injected via JS (avoids extra CSS) */
   const styleTag = document.createElement('style');
