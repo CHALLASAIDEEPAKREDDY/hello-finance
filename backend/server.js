@@ -1,19 +1,21 @@
 require('dotenv').config();
-const express    = require('express');
+const express = require('express');
 const nodemailer = require('nodemailer');
-const path       = require('path');
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// CORS - allow all origins
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept');
   res.header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
   next();
 });
 
@@ -25,81 +27,69 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Test route
+app.get('/', (req, res) => {
+  res.json({ status: 'Hello Finance API is running!' });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
 app.post('/api/contact', async (req, res) => {
+  console.log('📨 Contact form received:', req.body);
+
   const { name, phone, email, message, datetime } = req.body;
 
-  const errors = [];
-  if (!name   || name.trim().length < 2)                          errors.push('name');
-  if (!phone  || !/^[+]?[0-9\s\-]{10,14}$/.test(phone.trim()))  errors.push('phone');
-  if (!email  || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.push('email');
-  if (!message || message.trim().length < 10)                     errors.push('message');
-
-  if (errors.length) {
-    return res.status(400).json({ success: false, errors });
+  if (!name || !phone || !email || !message) {
+    console.log('❌ Validation failed - missing fields');
+    return res.status(400).json({ success: false, message: 'All fields required' });
   }
 
   const htmlEmail = `
-  <div style="font-family:sans-serif;max-width:580px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.1)">
-    <div style="background:linear-gradient(135deg,#0a1f3c,#0f2a4f);padding:28px 32px;color:#fff">
-      <p style="color:#f0b429;font-size:12px;font-weight:700;letter-spacing:2px;margin:0 0 8px">NEW ENQUIRY</p>
-      <h2 style="margin:0;font-size:20px">Hello Finance — Loan Enquiry</h2>
+  <div style="font-family:sans-serif;max-width:580px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,#0a1f3c,#0f2a4f);padding:28px 32px;color:#fff;border-radius:12px 12px 0 0">
+      <h2 style="margin:0;font-size:20px;">🏠 Hello Finance — New Loan Enquiry</h2>
     </div>
-    <div style="padding:28px 32px;background:#fff">
-      <table style="width:100%;border-collapse:collapse">
-        <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;color:#5d7186;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;width:140px">Full Name</td>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;font-weight:500;color:#1a2a3a">${escapeHtml(name)}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;color:#5d7186;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Phone</td>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;font-weight:500;color:#1a2a3a">${escapeHtml(phone)}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;color:#5d7186;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Email</td>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;font-weight:500;color:#1a2a3a">${escapeHtml(email)}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;color:#5d7186;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Date &amp; Time</td>
-          <td style="padding:10px 0;border-bottom:1px solid #eef3f9;font-weight:500;color:#1a2a3a">${escapeHtml(datetime || new Date().toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}))}</td>
-        </tr>
+    <div style="padding:28px 32px;background:#fff;border:1px solid #e2e9f2;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:10px 0;color:#5d7186;font-size:12px;font-weight:700;text-transform:uppercase;width:130px;">Full Name</td><td style="padding:10px 0;font-weight:500;">${name}</td></tr>
+        <tr><td style="padding:10px 0;color:#5d7186;font-size:12px;font-weight:700;text-transform:uppercase;">Phone</td><td style="padding:10px 0;font-weight:500;">${phone}</td></tr>
+        <tr><td style="padding:10px 0;color:#5d7186;font-size:12px;font-weight:700;text-transform:uppercase;">Email</td><td style="padding:10px 0;font-weight:500;">${email}</td></tr>
+        <tr><td style="padding:10px 0;color:#5d7186;font-size:12px;font-weight:700;text-transform:uppercase;">Date & Time</td><td style="padding:10px 0;font-weight:500;">${datetime || new Date().toLocaleString('en-IN', {timeZone:'Asia/Kolkata'})}</td></tr>
       </table>
-      <div style="margin-top:20px;background:#f7f9fc;border-radius:10px;padding:16px 18px">
-        <p style="color:#5d7186;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 8px">Message</p>
-        <p style="color:#1a2a3a;font-size:15px;line-height:1.7;margin:0">${escapeHtml(message).replace(/\n/g,'<br>')}</p>
+      <div style="margin-top:16px;background:#f7f9fc;border-radius:8px;padding:14px 16px;">
+        <p style="color:#5d7186;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 6px;">Message</p>
+        <p style="margin:0;color:#1a2a3a;">${message}</p>
       </div>
-      <a href="mailto:${escapeHtml(email)}" style="display:inline-block;margin-top:20px;background:#f0b429;color:#0d1b2a;padding:10px 22px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none">Reply to ${escapeHtml(name)} →</a>
+      <a href="mailto:${email}" style="display:inline-block;margin-top:18px;background:#f0b429;color:#0d1b2a;padding:10px 22px;border-radius:8px;font-weight:700;text-decoration:none;">Reply to ${name} →</a>
     </div>
-    <div style="background:#f7f9fc;padding:16px 32px;font-size:12px;color:#5d7186;border-top:1px solid #e2e9f2">
+    <div style="background:#f7f9fc;padding:14px 32px;font-size:12px;color:#5d7186;border-radius:0 0 12px 12px;border:1px solid #e2e9f2;border-top:none;">
       Hello Finance · support@hellofinance.in · +91 98737 37373
     </div>
   </div>`;
 
   try {
     await transporter.sendMail({
-      from:    `"Hello Finance Website" <${process.env.EMAIL_USER}>`,
-      to:      process.env.NOTIFY_EMAIL || 'ch.saideepakreddy@gmail.com',
+      from: `"Hello Finance Website" <${process.env.EMAIL_USER}>`,
+      to: process.env.NOTIFY_EMAIL || 'ch.saideepakreddy@gmail.com',
       replyTo: email,
       subject: `New Loan Enquiry from ${name} — Hello Finance`,
-      html:    htmlEmail,
+      html: htmlEmail,
     });
 
-    console.log(`✅ Enquiry sent — ${name} <${email}>`);
-    return res.status(200).json({ success: true, message: 'Enquiry sent successfully!' });
+    console.log(`✅ Email sent successfully to ${process.env.NOTIFY_EMAIL} from ${name}`);
+    return res.status(200).json({ success: true, message: 'Email sent successfully!' });
 
   } catch (err) {
-    console.error('❌ Email error:', err.message);
-    return res.status(500).json({ success: false, message: 'Failed to send email.' });
+    console.error('❌ Email send error:', err.message);
+    console.error('Full error:', err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📧 Sending emails from: ${process.env.EMAIL_USER}`);
+  console.log(`📬 Notifying: ${process.env.NOTIFY_EMAIL}`);
 });
