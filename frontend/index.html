@@ -1551,20 +1551,43 @@
   function bgClose(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  function submitApp() {
+ async function submitApp() {
     const name = document.getElementById('aName').value.trim();
     const phone = document.getElementById('aPhone').value.trim();
+    const city = document.getElementById('aCity').value.trim();
+    const amount = document.getElementById('aAmt').value.trim();
+    const loanType = document.getElementById('aType').value;
+
     if (!name) { document.getElementById('aName').focus(); document.getElementById('aName').style.borderColor = '#e53e3e'; return; }
     if (!phone || !/^\+?[0-9]{10,13}$/.test(phone.replace(/[\s-]/g,''))) {
       document.getElementById('aPhone').focus(); document.getElementById('aPhone').style.borderColor = '#e53e3e'; return;
     }
+
+    const submitBtn = document.querySelector('#modalOverlay .btn-primary');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
+
+    try {
+      await emailjs.send('service_xfswum8', 'template_0ihmoha', {
+        name:     name,
+        phone:    phone,
+        email:    'Not provided',
+        message:  `Loan Type: ${loanType}\nLoan Amount: ${amount || 'Not specified'}\nCity: ${city || 'Not specified'}`,
+        datetime: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' })
+      }, 'pIXQb9n5equZZLhBu');
+    } catch(err) {
+      console.error('Modal EmailJS error:', err);
+    }
+
     closeModal();
     const t = document.getElementById('toast');
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 4500);
-    ['aName','aPhone','aCity','aAmt'].forEach(id => { document.getElementById(id).value = ''; document.getElementById(id).style.borderColor = ''; });
+    ['aName','aPhone','aCity','aAmt'].forEach(id => {
+      document.getElementById(id).value = '';
+      document.getElementById(id).style.borderColor = '';
+    });
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Application →'; }
   }
-
   /* ======== MOBILE NAV ======== */
   function toggleMenu() {
     document.getElementById('navLinks').classList.toggle('open');
