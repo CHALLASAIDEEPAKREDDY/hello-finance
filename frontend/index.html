@@ -1641,7 +1641,7 @@
          e.g.  'https://your-server.com/api/contact'
          The backend server.js included in this package handles this.
       ----------------------------------------------------------- */
-      const res = await fetch('/api/contact', {
+      const res = await fetch('https://hello-finance-api.onrender.com/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
